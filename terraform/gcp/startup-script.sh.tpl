@@ -330,6 +330,15 @@ if [ -n "${huggingface_token}" ]; then
   HELM_ARGS="$HELM_ARGS --set hfToken.secretName=huggingface-token"
 fi
 
+# Set GCS voice cache configuration (always set to override config.yaml defaults)
+HELM_ARGS="$HELM_ARGS --set gcs.voiceCacheBucket=${voice_cache_bucket}"
+HELM_ARGS="$HELM_ARGS --set gcs.voiceCachePrefix=${voice_cache_prefix}"
+if [ -n "${voice_cache_bucket}" ]; then
+  echo "Using GCS voice cache bucket: ${voice_cache_bucket} (prefix: ${voice_cache_prefix})"
+else
+  echo "GCS voice cache disabled (empty bucket)"
+fi
+
 helm upgrade --install faster-qwen3-tts ${gar_helm_registry} \
   --version ${helm_chart_version} \
   $HELM_ARGS \

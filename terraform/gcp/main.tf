@@ -131,6 +131,8 @@ resource "google_compute_instance" "tts" {
     tts_model              = var.tts_model
     chunk_size             = var.chunk_size
     huggingface_token      = var.huggingface_token
+    voice_cache_bucket     = var.voice_cache_bucket
+    voice_cache_prefix     = var.voice_cache_prefix
   })
 
   # Copy the GAR service account key file to the instance

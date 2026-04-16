@@ -57,3 +57,9 @@ huggingface_token = ""  # Leave empty if not needed
 
 # Reservation Configuration
 use_reservation = false  # Set to true to use ANY_RESERVATION for reserved instances
+
+# GCS Voice Cache Configuration (optional - leave empty to disable)
+# When enabled, the TTS service will cache voice embeddings and audio files in GCS
+# This requires the service account to have storage.objects.* permissions on the bucket
+voice_cache_bucket = ""  # e.g., "my-voice-cache-bucket"
+voice_cache_prefix = "voices"  # Prefix/path within the bucket

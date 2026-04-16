@@ -135,3 +135,15 @@ variable "use_reservation" {
   type        = bool
   default     = false
 }
+
+variable "voice_cache_bucket" {
+  description = "GCS bucket name for voice cache (leave empty to disable GCS voice caching)"
+  type        = string
+  default     = ""
+}
+
+variable "voice_cache_prefix" {
+  description = "Prefix/path within the GCS bucket for voice cache"
+  type        = string
+  default     = "voices"
+}
