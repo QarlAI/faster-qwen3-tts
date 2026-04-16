@@ -638,14 +638,15 @@ async def tts_stream_http(request: TTSRequest):
 
     ref_audio, ref_text, vcp = resolve_voice(voice_name, uid=request.uid)
 
-    logging.info(f"HTTP Stream: text='{request.text[:50]}...', language={request.language}, voice={voice_name}")
-
     stream_start_time = time.time()
     ttfa_ms = None  # Time to first audio chunk
 
     async def generate_audio() -> AsyncIterator[bytes]:
         """Generate audio chunks and yield as raw PCM float32 bytes."""
         try:
+            instruct_log = f", instruct='{request.instruct}'" if request.instruct else ""
+            logging.info(f"HTTP Stream: text='{request.text[:50]}...', language={request.language}, voice={voice_name}{instruct_log}")
+
             first_chunk = True
             for chunk, sr, timing in model.generate_voice_clone_streaming(
                 text=request.text,
@@ -742,9 +743,8 @@ async def tts_websocket(websocket: WebSocket):
                 "language": language,
                 "text_length": len(text),
                 "request_id": request_id or "",
+                "instruct": request.instruct or "",
             }) as span:
-
-                logging.info(f"WebSocket: text='{text[:50]}...', language={language}, voice={voice_name}")
 
                 # Send start message
                 await websocket.send_json({
@@ -760,6 +760,10 @@ async def tts_websocket(websocket: WebSocket):
                 try:
                     chunk_count = 0
                     total_samples = 0
+                                   
+                    instruct_log = f", instruct='{request.instruct}'" if request.instruct else ""
+                    logging.info(f"WebSocket: text='{text[:50]}...', language={language}, voice={voice_name}{instruct_log}")
+
                     start_time = time.time()
 
                     for chunk, sample_rate, timing in model.generate_voice_clone_streaming(
@@ -846,9 +850,10 @@ async def tts_generate(request: TTSRequest):
 
     ref_audio, ref_text, vcp = resolve_voice(request.voice, uid=request.uid)
 
-    logging.info(f"HTTP Generate: text='{request.text[:50]}...', language={request.language}, voice={request.voice}")
-
     try:
+        instruct_log = f", instruct='{request.instruct}'" if request.instruct else ""
+        logging.info(f"HTTP Generate: text='{request.text[:50]}...', language={request.language}, voice={request.voice}{instruct_log}")
+
         start_time = time.time()
 
         wavs, sample_rate = model.generate_voice_clone(

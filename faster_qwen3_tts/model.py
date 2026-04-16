@@ -427,13 +427,17 @@ class FasterQwen3TTS:
             voice_clone_prompt=voice_clone_prompt,
         )
 
-        if instruct and not using_icl_mode:
-            logger.warning(
-                "Base-model instruct with x-vector-only voice cloning is experimental. "
-                "Upstream Qwen3-TTS itself does not follow instructions reliably in this "
-                "mode. Prefer xvec_only=False (ICL mode) when using instruct for voice "
-                "cloning."
-            )
+        if instruct:
+            if using_icl_mode:
+                logger.info(f"Using instruct in ICL mode: '{instruct}'")
+            else:
+                logger.warning(
+                    f"Using instruct in x-vector-only mode (experimental): '{instruct}'. "
+                    "Base-model instruct with x-vector-only voice cloning is experimental. "
+                    "Upstream Qwen3-TTS itself does not follow instructions reliably in this "
+                    "mode. Prefer xvec_only=False (ICL mode) when using instruct for voice "
+                    "cloning."
+                )
 
         m = self.model.model
 
