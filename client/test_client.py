@@ -182,6 +182,7 @@ async def stream_segment_tts(
     language: str = "English",
     voice: Optional[str] = None,
     uid: Optional[str] = None,
+    instruct: Optional[str] = None,
 ):
     """
     Stream a single segment to the server, buffer all chunks, then play complete audio.
@@ -200,6 +201,8 @@ async def stream_segment_tts(
         request["voice"] = voice
     if uid is not None:
         request["uid"] = uid
+    if instruct is not None:
+        request["instruct"] = instruct
 
     await websocket.send(json.dumps(request))
 
@@ -295,6 +298,7 @@ async def run_streaming_mode(
     play_audio: bool = True,
     delay: float = 0,
     resume: bool = False,
+    instruct: Optional[str] = None,
 ):
     """Stream text to TTS server using WebSocket with concurrent playback."""
     if not HAS_WEBSOCKETS:
@@ -360,6 +364,7 @@ async def run_streaming_mode(
                     language=language,
                     voice=voice,
                     uid=uid,
+                    instruct=instruct,
                 )
 
                 segment_metrics.append(metrics)
@@ -435,6 +440,7 @@ def run_http_stream_mode(
     play_audio: bool = True,
     delay: float = 0,
     resume: bool = False,
+    instruct: Optional[str] = None,
 ):
     """Stream text to TTS server using HTTP /tts/stream (raw float32 PCM bytes)."""
     segments = SPLIT_MODES[mode](text)
@@ -487,6 +493,8 @@ def run_http_stream_mode(
             payload["voice"] = voice
         if uid is not None:
             payload["uid"] = uid
+        if instruct is not None:
+            payload["instruct"] = instruct
 
         send_time = time.time()
         first_chunk_time = None
@@ -576,6 +584,7 @@ def run_non_streaming_mode(
     play_audio: bool = True,
     delay: float = 0,
     resume: bool = False,
+    instruct: Optional[str] = None,
 ):
     """Send text to TTS server using HTTP POST endpoint."""
     segments = SPLIT_MODES[mode](text)
@@ -633,6 +642,8 @@ def run_non_streaming_mode(
         }
         if uid:
             payload["uid"] = uid
+        if instruct:
+            payload["instruct"] = instruct
 
         start = time.time()
         try:
@@ -834,6 +845,13 @@ Examples:
         help="Use HTTP /tts/stream endpoint instead of WebSocket"
     )
 
+    parser.add_argument(
+        "--instruct",
+        type=str,
+        default=None,
+        help="Optional instruction to guide generation style/dialect (e.g., 'Warm, confident narrator')"
+    )
+
     args = parser.parse_args()
 
     if not args.text and not args.file:
@@ -885,6 +903,7 @@ Examples:
                 play_audio=play_audio,
                 delay=args.delay,
                 resume=args.resume,
+                instruct=args.instruct,
             )
         elif args.http_stream:
             # HTTP stream mode
@@ -900,6 +919,7 @@ Examples:
                 play_audio=play_audio,
                 delay=args.delay,
                 resume=args.resume,
+                instruct=args.instruct,
             )
         else:
             # Streaming mode (WebSocket)
@@ -915,6 +935,7 @@ Examples:
                 play_audio=play_audio,
                 delay=args.delay,
                 resume=args.resume,
+                instruct=args.instruct,
             ))
     except KeyboardInterrupt:
         print("\n\nInterrupted by user")

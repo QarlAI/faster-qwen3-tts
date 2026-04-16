@@ -138,6 +138,11 @@ The unified client supports both streaming and non-streaming modes.
 python test_client.py <PUBLIC_IP> "Hello world. This is a test." --voice my_voice
 ```
 
+**With instruct parameter:**
+```bash
+python test_client.py <PUBLIC_IP> "Hello world." --voice my_voice --instruct "Warm, confident narrator"
+```
+
 **Read from file:**
 ```bash
 python test_client.py <PUBLIC_IP> --file document.txt --voice my_voice
@@ -221,6 +226,7 @@ options:
                         Delay between requests (default: 0)
   --resume              Skip segments with existing WAV files
   --no-streaming        Use non-streaming mode (HTTP POST)
+  --instruct INSTRUCT   Optional instruction to guide generation style/dialect
 ```
 
 ## Voice Upload Feature
@@ -461,6 +467,26 @@ python test_client.py <IP> "Hello" --language en --voice my_voice
 - English (en), French (fr), Chinese (zh), Japanese (ja), Korean (ko)
 - German (de), Spanish (es), Italian (it), Portuguese (pt)
 - Russian (ru), Arabic (ar)
+
+### Using the Instruct Parameter
+
+The `--instruct` parameter allows you to guide the generation style, dialect, or characteristics:
+
+```bash
+# Add style instructions
+python test_client.py <IP> "Hello world" --voice my_voice --instruct "Warm, confident narrator with slight British accent"
+
+# Guide dialect (works best in ICL mode)
+python test_client.py <IP> "你好世界" --language Chinese --voice my_voice --instruct "请用纯正广东话朗读"
+
+# Control delivery style
+python test_client.py <IP> "Welcome to the show!" --voice my_voice --instruct "Fast-paced, energetic delivery"
+```
+
+**Notes:**
+- The `instruct` parameter is experimental and works best with ICL mode (default)
+- It's available in all modes: streaming (WebSocket), HTTP stream, and non-streaming
+- Instruction-following quality may vary depending on the voice and language used
 
 ### Batch Processing
 

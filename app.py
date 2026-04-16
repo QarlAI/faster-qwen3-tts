@@ -326,6 +326,7 @@ class TTSRequest(BaseModel):
     uid: Optional[str] = None
     denoise: Optional[bool] = False
     request_id: Optional[str] = None
+    instruct: Optional[str] = None
 
     def model_post_init(self, __context):
         # Map voice_id -> voice for chatterbox compatibility
@@ -654,6 +655,7 @@ async def tts_stream_http(request: TTSRequest):
                 voice_clone_prompt=vcp,
                 chunk_size=CHUNK_SIZE,
                 xvec_only=False,
+                instruct=request.instruct,
             ):
 
                 pcm = np.nan_to_num(chunk.astype(np.float32), nan=0.0, posinf=1.0, neginf=-1.0)
@@ -768,6 +770,7 @@ async def tts_websocket(websocket: WebSocket):
                         voice_clone_prompt=vcp,
                         chunk_size=CHUNK_SIZE,
                         xvec_only=False,
+                        instruct=request.instruct,
                     ):
                         chunk_count += 1
                         total_samples += len(chunk)
@@ -855,6 +858,7 @@ async def tts_generate(request: TTSRequest):
             ref_text=ref_text,
             voice_clone_prompt=vcp,
             xvec_only=False,
+            instruct=request.instruct,
         )
 
         generation_time = round(time.time() - start_time, 2)

@@ -92,6 +92,19 @@ faster-qwen3-tts design \
   --output out.wav
 ```
 
+Voice cloning with instruct (experimental):
+
+```bash
+faster-qwen3-tts clone \
+  --model Qwen/Qwen3-TTS-12Hz-1.7B-Base \
+  --text "Welcome to the show." \
+  --language English \
+  --ref-audio ref_audio.wav \
+  --ref-text "I'm confused why some people have super short timelines..." \
+  --instruct "Warm, confident narrator with slight British accent" \
+  --output out.wav
+```
+
 Streaming generation to a final WAV file (prints RTF after write):
 
 ```bash
@@ -259,6 +272,13 @@ The original Qwen3TTS implementation supports two mode of generation. It either 
 ### Base-model instruct
 
 `instruct` is available on Base voice cloning, but treat it as experimental when used with `xvec_only=True`. In local testing and upstream-core probing, instruction-following behaved much more predictably in ICL mode (`xvec_only=False`) than in x-vector-only mode.
+
+The `instruct` parameter allows you to guide the generation style, dialect, or characteristics. Examples:
+- `"Warm, confident narrator with slight British accent"`
+- `"请用纯正广东话朗读"` (Read in authentic Cantonese)
+- `"Fast-paced, energetic delivery"`
+
+This parameter is available in all API endpoints (`/tts`, `/tts/stream`, `/tts/ws`) and can be combined with voice cloning for more control over the generated speech.
 
 ### ICL Phoneme Artifact
 
