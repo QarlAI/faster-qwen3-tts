@@ -175,6 +175,73 @@ Run manually on a GPU machine:
 
 ---
 
+### `test_tts_latency.py` — Deployed-server latency benchmark *(excluded from CI)*
+Client-side latency/throughput benchmark for choosing a GPU instance type. Unlike
+`benchmarks/throughput.py` (which loads the model in-process), this hits a **deployed**
+server over HTTP and WebSocket via `TTS_URL`, so you run it once per instance type and
+compare. Each run writes a JSON artifact tagged with `GPU_LABEL` to
+`benchmarks/latency_results/`.
+
+| Test | What it measures |
+|------|------------------|
+| `test_non_streaming_latency` | `POST /tts` full request latency, server generation time, audio duration, server + client RTF — for short/medium/long text |
+| `test_streaming_latency` | `WS /tts/ws` client time-to-first-audio (TTFA), total time and RTF — for short/medium/long text |
+
+Each metric is reported as mean / std / p50 / p90 / p99 / min / max over `LATENCY_RUNS`
+measured iterations (after `LATENCY_WARMUP` discarded warmups). Threshold asserts on
+TTFA and RTF are on by default (set `LATENCY_ASSERT=0` for pure data-gathering).
+
+Concurrency defaults to **1** to match production, which leases one TTS pod per job
+(`tts_registry.py`). The client disables websocket keepalive (`ping_interval=None`),
+mirroring the pipecat client, because the server iterates a blocking generator on the
+event loop and can't answer pings under load. You *can* set `LATENCY_CONCURRENCY=1,2,4,8`
+to probe packing multiple streams onto one pod, but until the server offloads generation
+off the event loop those numbers are a lower bound, not the GPU's real headroom — see
+[event-loop-offload-plan.md](../docs/event-loop-offload-plan.md).
+
+Run against each deployed instance, tagging the GPU:
+```bash
+# A10G instance
+GPU_LABEL=A10G TTS_URL=http://my-a10g-host:8000 \
+    .venv/bin/pytest tests/test_tts_latency.py -v -s
+
+# L4 instance
+GPU_LABEL=L4 TTS_URL=http://my-l4-host:8000 \
+    .venv/bin/pytest tests/test_tts_latency.py -v -s
+
+# More samples (still one stream per pod, as in production)
+GPU_LABEL=A100-40GB TTS_URL=http://my-a100-host:8000 \
+    LATENCY_RUNS=20 \
+    .venv/bin/pytest tests/test_tts_latency.py -v -s
+```
+
+**Benchmarking vLLM-Omni** — set `TTS_BACKEND=vllm-omni` to point the *same* harness at a
+vLLM-Omni server (OpenAI-compatible `POST /v1/audio/speech`). Non-streaming uses `stream=false`;
+streaming uses `stream=true, response_format=pcm` (TTFA = time to first PCM byte, duration from
+the byte count). vLLM-Omni exposes no server-side RTF, so the comparison uses client-measured RTF.
+```bash
+GPU_LABEL=L4 TTS_BACKEND=vllm-omni TTS_URL=http://my-l4-host:8091 \
+    LATENCY_VOICE=<english-voice> LATENCY_CONCURRENCY=1,2,4 \
+    .venv/bin/pytest tests/test_tts_latency.py -v -s
+```
+Artifacts are tagged with the backend, so faster-qwen3 and vllm-omni runs on the same GPU
+coexist and `compare_latency.py` shows them as separate rows (`L4 [faster-qwen3]` vs `L4 [vllm-omni]`).
+
+Then compare all collected artifacts side-by-side:
+```bash
+python benchmarks/compare_latency.py                 # compares the 'medium' text
+python benchmarks/compare_latency.py --text long     # or short / long
+```
+
+Key env vars: `TTS_URL`, `GPU_LABEL` (or `INSTANCE_TYPE`), `LATENCY_VOICE`
+(default `english-male`), `LATENCY_LANGUAGE`, `LATENCY_WARMUP`, `LATENCY_RUNS`,
+`LATENCY_CONCURRENCY`, `LATENCY_RESULTS_DIR`, `LATENCY_ASSERT`, `LATENCY_MAX_TTFA_MS`,
+`LATENCY_MIN_RTF`. vLLM-Omni: `TTS_BACKEND=vllm-omni`, `VLLM_MODEL`, `VLLM_RESPONSE_FORMAT`,
+`VLLM_PCM_SAMPLE_RATE`, `VLLM_PCM_BYTES_PER_SAMPLE`, `VLLM_REF_AUDIO`/`VLLM_REF_TEXT`.
+(Requires `requests`, `websockets`, and `httpx`, like the other E2E tests.)
+
+---
+
 ## Infrastructure
 
 ### `conftest.py`

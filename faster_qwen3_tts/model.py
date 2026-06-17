@@ -883,7 +883,7 @@ class FasterQwen3TTS:
         top_p: float = 1.0,
         do_sample: bool = True,
         repetition_penalty: float = 1.05,
-        chunk_size: int = 12,
+        chunk_size: Union[int, List[int]] = 12,
         xvec_only: bool = False,
         non_streaming_mode: bool = False,
         append_silence: bool = True,
@@ -929,7 +929,7 @@ class FasterQwen3TTS:
         Yields:
             Tuple of (audio_chunk_numpy, sample_rate, timing_dict)
         """
-        from .streaming import fast_generate_streaming, parity_generate_streaming
+        from .streaming import fast_generate_streaming, parity_generate_streaming, resolve_chunk_schedule
 
         m, talker, config, tie, tam, tth, tpe, ref_codes = self._prepare_generation(
             text=text,
@@ -950,7 +950,7 @@ class FasterQwen3TTS:
         # 2. Sliding window with 25-frame left context once calibrated (constant cost)
         # This avoids boundary artifacts (pops) while keeping decode cost bounded.
         context_frames = 25
-        min_calibration_frames = max(context_frames, chunk_size)
+        min_calibration_frames = max(context_frames, resolve_chunk_schedule(chunk_size)[0])
         all_codes = []
         prev_gen_audio_len = 0  # tracks position within the generated (non-ref) audio
         samples_per_frame = None
@@ -1127,7 +1127,7 @@ class FasterQwen3TTS:
         top_p: float = 1.0,
         do_sample: bool = True,
         repetition_penalty: float = 1.05,
-        chunk_size: int = 12,
+        chunk_size: Union[int, List[int]] = 12,
     ) -> Generator[Tuple[np.ndarray, int, dict], None, None]:
         if self.model.model.tts_model_type != "custom_voice":
             raise ValueError("Loaded model does not support custom voice generation")
@@ -1138,7 +1138,7 @@ class FasterQwen3TTS:
         if self.model.model.tts_model_size in "0b6":
             instruct = None
 
-        from .streaming import fast_generate_streaming
+        from .streaming import fast_generate_streaming, resolve_chunk_schedule
 
         m, talker, config, tie, tam, tth, tpe = self._prepare_generation_custom(
             text=text,
@@ -1150,7 +1150,7 @@ class FasterQwen3TTS:
         speech_tokenizer = m.speech_tokenizer
 
         context_frames = 25
-        min_calibration_frames = max(context_frames, chunk_size)
+        min_calibration_frames = max(context_frames, resolve_chunk_schedule(chunk_size)[0])
         all_codes = []
         prev_audio_len = 0
         samples_per_frame = None
@@ -1296,14 +1296,14 @@ class FasterQwen3TTS:
         top_p: float = 1.0,
         do_sample: bool = True,
         repetition_penalty: float = 1.05,
-        chunk_size: int = 12,
+        chunk_size: Union[int, List[int]] = 12,
     ) -> Generator[Tuple[np.ndarray, int, dict], None, None]:
         if self.model.model.tts_model_type != "voice_design":
             raise ValueError("Loaded model does not support voice design generation")
 
         self.model._validate_languages([language])
 
-        from .streaming import fast_generate_streaming
+        from .streaming import fast_generate_streaming, resolve_chunk_schedule
 
         m, talker, config, tie, tam, tth, tpe = self._prepare_generation_custom(
             text=text,
@@ -1315,7 +1315,7 @@ class FasterQwen3TTS:
         speech_tokenizer = m.speech_tokenizer
 
         context_frames = 25
-        min_calibration_frames = max(context_frames, chunk_size)
+        min_calibration_frames = max(context_frames, resolve_chunk_schedule(chunk_size)[0])
         all_codes = []
         prev_audio_len = 0
         samples_per_frame = None

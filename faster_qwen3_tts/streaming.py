@@ -6,13 +6,31 @@ Yields codec ID chunks during generation instead of collecting all at once.
 CUDA graph usage is identical to non-streaming — same per-step performance.
 """
 import time
-from typing import Generator, Tuple
+from typing import Generator, List, Tuple, Union
 
 import torch
 
 from .predictor_graph import PredictorGraph
 from .sampling import apply_repetition_penalty, sample_logits
 from .talker_graph import TalkerGraph
+
+
+def resolve_chunk_schedule(chunk_size: Union[int, List[int]]) -> List[int]:
+    """Normalize chunk_size into a ramp schedule (list of ints, last value repeats).
+
+    A scalar gives a fixed chunk size; a list ramps (e.g. [2, 4, 8, 16, 32, 64])
+    for low TTFA on the first chunk and better RTF on the tail.
+    """
+    if isinstance(chunk_size, (list, tuple)):
+        schedule = [int(c) for c in chunk_size if int(c) > 0]
+    else:
+        schedule = [int(chunk_size)]
+    return schedule or [8]
+
+
+def target_chunk(schedule: List[int], chunk_index: int) -> int:
+    """Target frame count for the given chunk index, clamped to the last ramp value."""
+    return schedule[min(chunk_index, len(schedule) - 1)]
 
 
 @torch.inference_mode()
@@ -32,15 +50,17 @@ def fast_generate_streaming(
     top_p: float = 1.0,
     do_sample: bool = True,
     repetition_penalty: float = 1.05,
-    chunk_size: int = 12,
+    chunk_size: Union[int, List[int]] = 12,
 ) -> Generator[Tuple[torch.Tensor, dict], None, None]:
     """
     Streaming autoregressive generation with CUDA-graphed predictor and talker.
 
-    Yields (codec_chunk, timing_info) tuples every chunk_size steps.
-    codec_chunk: [chunk_steps, 16] tensor of codec IDs.
-    The final chunk may be shorter than chunk_size.
+    Yields (codec_chunk, timing_info) tuples. chunk_size may be a scalar (fixed
+    chunk) or a ramp list (e.g. [2, 4, 8, 16, 32, 64]); the ramp's last value
+    repeats once exhausted. codec_chunk: [chunk_steps, 16] tensor of codec IDs.
+    The final chunk may be shorter than the target.
     """
+    chunk_schedule = resolve_chunk_schedule(chunk_size)
     eos_id = config.codec_eos_token_id
     vocab_size = config.vocab_size
     device = talker_input_embeds.device
@@ -153,8 +173,8 @@ def fast_generate_streaming(
         past_hidden = hidden_states[:, -1:, :].clone()
         gen_step += 1
 
-        # --- Yield chunk when buffer is full ---
-        if len(chunk_buffer) >= chunk_size:
+        # --- Yield chunk when buffer reaches the current ramp target ---
+        if len(chunk_buffer) >= target_chunk(chunk_schedule, chunk_count):
             torch.cuda.synchronize()
             chunk_decode_time = time.time() - chunk_start
             total_steps += len(chunk_buffer)
@@ -203,13 +223,15 @@ def parity_generate_streaming(
     top_p: float = 1.0,
     do_sample: bool = True,
     repetition_penalty: float = 1.05,
-    chunk_size: int = 12,
+    chunk_size: Union[int, List[int]] = 12,
 ) -> Generator[Tuple[torch.Tensor, dict], None, None]:
     """
     Streaming generation without CUDA graphs (dynamic cache).
 
-    Yields (codec_chunk, timing_info) tuples every chunk_size steps.
+    Yields (codec_chunk, timing_info) tuples. chunk_size may be a scalar or a
+    ramp list (last value repeats), matching fast_generate_streaming.
     """
+    chunk_schedule = resolve_chunk_schedule(chunk_size)
     # NOTE: This function intentionally mirrors fast_generate_streaming. The core
     # decode loop is duplicated so we can swap CUDA graphs/static cache for the
     # dynamic-cache path while keeping sampling/chunking identical. If you edit
@@ -326,7 +348,7 @@ def parity_generate_streaming(
         past_hidden = out.past_hidden
         gen_step = out.generation_step
 
-        if len(chunk_buffer) >= chunk_size:
+        if len(chunk_buffer) >= target_chunk(chunk_schedule, chunk_count):
             torch.cuda.synchronize()
             chunk_decode_time = time.time() - chunk_start
             total_steps += len(chunk_buffer)

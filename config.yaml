@@ -13,4 +13,7 @@ voices:
     prefix: "voices/qwen3"   # Prefix/path within the bucket
 
 streaming:
-  chunk_size: 8  # Number of codec frames per chunk (16 frames ≈ 1333ms of audio)
+  # Codec frames per chunk. A single int is a fixed chunk; a list is a ramp
+  # (last value repeats) — small first chunk for low TTFA, larger tail chunks
+  # for better RTF (less codec re-decode of the 25-frame left context).
+  chunk_size: [2, 4, 8, 16, 32, 64]
