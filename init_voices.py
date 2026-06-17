@@ -17,6 +17,15 @@ def init_voices():
     Skips files that already exist locally with the same size.
     Silently returns if GCS is not configured.
     """
+    # Prefer the live-assets git repo when configured (GCP->Azure migration);
+    # fall back to GCS otherwise.
+    try:
+        import live_assets
+        if live_assets.sync_voices():
+            return
+    except Exception as e:
+        logger.warning(f"live-assets voice sync failed, falling back to GCS: {e}")
+
     config = load_config()
     voices_config = config.get("voices", {})
     gcs_config = voices_config.get("gcs", {})

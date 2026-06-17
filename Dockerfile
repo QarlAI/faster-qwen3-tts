@@ -34,6 +34,7 @@ RUN pip install --no-cache-dir -e .
 # Copy application code
 COPY config.yaml .
 COPY config.py .
+COPY live_assets.py .
 COPY init_voices.py .
 COPY otel_setup.py .
 COPY tts_registry.py .

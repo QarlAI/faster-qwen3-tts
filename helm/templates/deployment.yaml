@@ -111,6 +111,19 @@ spec:
         - name: VOICE_CACHE_PREFIX
           value: {{ .Values.gcs.voiceCachePrefix | quote }}
         {{- end }}
+        {{- if .Values.liveAssets.repo }}
+        - name: LIVE_ASSETS_REPO
+          value: {{ .Values.liveAssets.repo | quote }}
+        - name: LIVE_ASSETS_BRANCH
+          value: {{ .Values.liveAssets.branch | quote }}
+        {{- if .Values.liveAssets.tokenSecretName }}
+        - name: LIVE_ASSETS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.liveAssets.tokenSecretName }}
+              key: {{ .Values.liveAssets.tokenSecretKey | default "LIVE_ASSETS_TOKEN" }}
+        {{- end }}
+        {{- end }}
         {{- range $name, $value := .Values.envVars }}
         - name: {{ $name }}
           value: {{ $value | quote }}

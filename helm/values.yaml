@@ -85,6 +85,16 @@ gcs:
   voiceCacheBucket: ""
   voiceCachePrefix: ""
 
+# live-assets git repo voice source. When repo+branch are set, builtin voices
+# are fetched from the repo at startup instead of GCS (GCP->Azure migration).
+# Token is optional (reuses the avatar_profiles org PAT via AVATAR_PROFILES_TOKEN
+# if no dedicated secret is given).
+liveAssets:
+  repo: ""
+  branch: ""
+  tokenSecretName: ""
+  tokenSecretKey: "LIVE_ASSETS_TOKEN"
+
 # Deployment progress deadline (in seconds)
 # This is how long Kubernetes will wait for the deployment to make progress before marking it as failed
 progressDeadlineSeconds: 600
