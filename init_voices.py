@@ -64,7 +64,8 @@ def init_voices():
 
     Source selection (first configured wins):
         1. git repo — voices.git.repo/branch (or VOICE_CACHE_GIT_REPO/BRANCH env),
-           token via VOICE_CACHE_GIT_TOKEN; prefix within the repo defaults to "voices".
+           token via VOICE_CACHE_GIT_TOKEN; prefix within the repo defaults to
+           "voices/qwen3" (the flat layout this server reads).
         2. GCS bucket — voices.gcs.bucket/prefix (or VOICE_CACHE_BUCKET/PREFIX env).
 
     Silently returns if neither source is configured.
@@ -80,7 +81,7 @@ def init_voices():
     git_branch = os.environ.get("VOICE_CACHE_GIT_BRANCH", git_config.get("branch", ""))
     if git_repo and git_branch:
         git_token = os.environ.get("VOICE_CACHE_GIT_TOKEN", git_config.get("token", ""))
-        git_prefix = os.environ.get("VOICE_CACHE_GIT_PREFIX", git_config.get("prefix", "voices"))
+        git_prefix = os.environ.get("VOICE_CACHE_GIT_PREFIX", git_config.get("prefix", "voices/qwen3"))
         try:
             if _download_voices_from_git(git_repo, git_branch, git_token, git_prefix, voices_dir):
                 return
