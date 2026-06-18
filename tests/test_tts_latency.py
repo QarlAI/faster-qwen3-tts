@@ -48,9 +48,14 @@ vLLM-Omni env vars (used only when TTS_BACKEND=vllm-omni):
     LATENCY_VOICE          voice name — an ENGLISH preset from GET /v1/audio/voices
                            or your own cloned voice; match it to your test language
     VLLM_RESPONSE_FORMAT   audio format (default "pcm" → raw int16 LE @ 24kHz mono)
-    VLLM_PCM_SAMPLE_RATE   PCM sample rate for duration math (default 24000)
+    VLLM_PCM_SAMPLE_RATE   PCM sample rate for duration math (default 24000;
+                           set 48000 for VoxCPM2. WS path also reads it from audio.start)
     VLLM_PCM_BYTES_PER_SAMPLE  bytes/sample (default 2 = int16)
     VLLM_REF_AUDIO / VLLM_REF_TEXT  optional inline voice-cloning params
+    VLLM_STREAM_TRANSPORT  streaming test transport: "http" (default) or "ws"
+                           (text streamed in incrementally via /v1/audio/speech/stream)
+    VLLM_TASK_TYPE         WS session task_type: CustomVoice|VoiceDesign|Base (default: model's)
+    VLLM_WS_STT_DELAY      WS path: seconds between words (default 0 = burst; >0 simulates STT)
 
     # example:
     GPU_LABEL=L4 TTS_BACKEND=vllm-omni TTS_URL=http://<host>:8091 \
@@ -94,6 +99,16 @@ PCM_SAMPLE_RATE = int(os.getenv("VLLM_PCM_SAMPLE_RATE", "24000"))
 PCM_BYTES_PER_SAMPLE = int(os.getenv("VLLM_PCM_BYTES_PER_SAMPLE", "2"))  # 2 = int16 LE
 VLLM_REF_AUDIO = os.getenv("VLLM_REF_AUDIO") or None
 VLLM_REF_TEXT = os.getenv("VLLM_REF_TEXT") or None
+
+# vLLM-Omni streaming transport: "http" (POST /v1/audio/speech, stream=true) or
+# "ws" (WebSocket /v1/audio/speech/stream — text streamed IN incrementally,
+# per-sentence PCM streamed OUT). Only affects the streaming test.
+VLLM_STREAM_TRANSPORT = os.getenv("VLLM_STREAM_TRANSPORT", "http").lower()
+VLLM_TASK_TYPE = os.getenv("VLLM_TASK_TYPE") or None  # CustomVoice|VoiceDesign|Base; omitted -> model default
+# Seconds between words when feeding text on the WS path. 0 = burst all words
+# immediately (measures TTS compute); >0 simulates an upstream STT/LLM token rate
+# (TTFA then includes first-sentence accumulation).
+VLLM_WS_STT_DELAY = float(os.getenv("VLLM_WS_STT_DELAY", "0"))
 
 # Representative texts spanning a range of lengths — latency and RTF both scale
 # with how much audio gets generated, so we want short/medium/long coverage.
@@ -211,8 +226,10 @@ def _measure_non_streaming_vllm(text):
 
 
 async def _measure_streaming_once(text):
-    """One streaming request. Dispatches on TTS_BACKEND."""
+    """One streaming request. Dispatches on TTS_BACKEND (and transport for vllm-omni)."""
     if BACKEND == "vllm-omni":
+        if VLLM_STREAM_TRANSPORT == "ws":
+            return await _measure_streaming_once_vllm_ws(text)
         return await _measure_streaming_once_vllm(text)
     return await _measure_streaming_once_fq(text)
 
@@ -254,6 +271,114 @@ async def _measure_streaming_once_vllm(text):
         }
 
     return await asyncio.wait_for(_stream(), timeout=STREAM_TIMEOUT)
+
+
+def _vllm_ws_config():
+    """session.config for /v1/audio/speech/stream. Forces pcm + stream_audio so
+    we get raw bytes per chunk (true TTFA) and can derive duration from byte count."""
+    cfg = {
+        "voice": VOICE,
+        "response_format": "pcm",
+        "stream_audio": True,
+    }
+    if VLLM_MODEL:
+        cfg["model"] = VLLM_MODEL
+    if LANGUAGE:
+        cfg["language"] = LANGUAGE
+    if VLLM_TASK_TYPE:
+        cfg["task_type"] = VLLM_TASK_TYPE
+    if VLLM_REF_AUDIO:
+        cfg["ref_audio"] = VLLM_REF_AUDIO
+    if VLLM_REF_TEXT:
+        cfg["ref_text"] = VLLM_REF_TEXT
+    return cfg
+
+
+async def _measure_streaming_once_vllm_ws(text):
+    """vLLM-Omni streaming-text WebSocket: /v1/audio/speech/stream.
+
+    Streams text IN word-by-word (the real LLM->TTS path) and per-sentence PCM
+    OUT. TTFA = time from first text sent to first audio byte; duration from the
+    PCM byte count (sample rate taken from the audio.start event). Sentence
+    segmentation + pipelining happen server-side.
+    """
+    uri = f"{WS_URL}/v1/audio/speech/stream"
+
+    async def _run():
+        # Manual connect (not `async with`): the server drops the TCP socket
+        # without a WS close handshake right after session.done, so the implicit
+        # close raises ConnectionClosedError. We swallow that close-time error
+        # once we've received session.done; a drop *before* session.done still
+        # propagates as a real failure.
+        ws = await websockets.connect(uri, max_size=None, ping_interval=None)
+        await ws.send(json.dumps({"type": "session.config", **_vllm_ws_config()}))
+
+        async def _send():
+            words = text.split(" ")
+            for i, w in enumerate(words):
+                chunk = w + (" " if i < len(words) - 1 else "")
+                await ws.send(json.dumps({"type": "input.text", "text": chunk}))
+                if VLLM_WS_STT_DELAY > 0:
+                    await asyncio.sleep(VLLM_WS_STT_DELAY)
+            await ws.send(json.dumps({"type": "input.done"}))
+
+        t0 = time.perf_counter()
+        sender = asyncio.create_task(_send())
+        ttfa_ms = None
+        total_bytes = 0
+        chunk_count = 0
+        sentence_count = 0
+        sample_rate = PCM_SAMPLE_RATE
+        got_done = False
+        try:
+            while True:
+                msg = await ws.recv()
+                if isinstance(msg, (bytes, bytearray)):
+                    if msg:
+                        if ttfa_ms is None:
+                            ttfa_ms = (time.perf_counter() - t0) * 1000
+                        total_bytes += len(msg)
+                        chunk_count += 1
+                    continue
+                ev = json.loads(msg)
+                et = ev.get("type")
+                if et == "audio.start":
+                    sentence_count += 1
+                    sr = ev.get("sample_rate")
+                    if sr:
+                        sample_rate = int(sr)
+                elif et == "session.done":
+                    got_done = True
+                    break
+                elif et == "error":
+                    raise RuntimeError(f"speech/stream error: {ev.get('message')}")
+        except websockets.exceptions.ConnectionClosed:
+            if not got_done:
+                raise  # genuine mid-stream drop — real failure
+        finally:
+            sender.cancel()
+            try:
+                await sender
+            except Exception:  # noqa: BLE001 - sender may have hit the closed socket
+                pass
+            try:
+                await ws.close()
+            except Exception:  # noqa: BLE001 - benign ungraceful close after session.done
+                pass
+        total_ms = (time.perf_counter() - t0) * 1000
+        denom = PCM_BYTES_PER_SAMPLE * sample_rate
+        audio_dur = total_bytes / denom if denom else 0.0
+        return {
+            "ttfa_ms": ttfa_ms,
+            "total_ms": total_ms,
+            "server_generation_ms": None,
+            "audio_duration_s": audio_dur,
+            "rtf": (audio_dur / (total_ms / 1000)) if total_ms > 0 else 0.0,
+            "chunk_count": chunk_count,
+            "sentence_count": sentence_count,
+        }
+
+    return await asyncio.wait_for(_run(), timeout=STREAM_TIMEOUT)
 
 
 async def _measure_streaming_once_fq(text):
@@ -337,6 +462,8 @@ def collector():
         "gpu_label": GPU_LABEL,
         "backend": BACKEND,
         "model": VLLM_MODEL if BACKEND == "vllm-omni" else None,
+        "stream_transport": VLLM_STREAM_TRANSPORT if BACKEND == "vllm-omni" else "ws",
+        "ws_stt_delay": VLLM_WS_STT_DELAY if (BACKEND == "vllm-omni" and VLLM_STREAM_TRANSPORT == "ws") else None,
         "tts_url": TTS_URL,
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "voice": VOICE,
@@ -361,7 +488,10 @@ def _write_and_summarize(data):
         json.dump(data, f, indent=2)
 
     ns_ep = "/v1/audio/speech" if BACKEND == "vllm-omni" else "/tts"
-    st_ep = "/v1/audio/speech (stream)" if BACKEND == "vllm-omni" else "/tts/ws"
+    if BACKEND == "vllm-omni":
+        st_ep = "/v1/audio/speech/stream (ws)" if VLLM_STREAM_TRANSPORT == "ws" else "/v1/audio/speech (stream)"
+    else:
+        st_ep = "/tts/ws"
     line = "=" * 78
     print(f"\n{line}\nLATENCY BENCHMARK  backend={BACKEND}  gpu={GPU_LABEL}  url={TTS_URL}\n{line}")
 
