@@ -29,7 +29,7 @@ jobs:
       TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
       IMAGE_REGISTRY: ${{ inputs.image_registry || 'ghcr.io/qarlai/dockerimg' }}
       IMAGE_TAG: ${{ inputs.image_tag }}
-      GH_PAT: ${{ secrets.GH_PAT }}
+      GH_PAT: ${{ secrets.GHCR_PAT }}
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
       SERVICE_ACCOUNT_EMAIL: qarl-studio-backend-sa@qarl-studio.iam.gserviceaccount.com
 
