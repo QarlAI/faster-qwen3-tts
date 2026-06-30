@@ -6,7 +6,7 @@ image:
   pullPolicy: IfNotPresent
 
 imagePullSecrets:
-  - name: gar-docker-reg-secret
+  - name: ghcr-pull-secret
 
 # Number of TTS pods. Each pod requests one GPU, so the node-group=tts node(s)
 # must collectively expose at least this many `nvidia.com/gpu` resources.
