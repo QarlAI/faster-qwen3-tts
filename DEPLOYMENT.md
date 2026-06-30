@@ -98,11 +98,10 @@ docker build -t faster-qwen3-tts:1.0.0 .
 docker tag faster-qwen3-tts:1.0.0 \
   ghcr.io/qarlai/dockerimg/faster-qwen3-tts:1.0.0
 
-# Authenticate with GAR
-cat /path/to/service-account-key.json | \
-  docker login -u _json_key --password-stdin https://us-docker.pkg.dev
+# Authenticate with GHCR
+echo "$GHCR_PAT" | docker login ghcr.io -u maviszeng-qarl --password-stdin
 
-# Push to GAR
+# Push to GHCR
 docker push ghcr.io/qarlai/dockerimg/faster-qwen3-tts:1.0.0
 ```
 
@@ -114,9 +113,9 @@ docker build --platform linux/amd64 -t faster-qwen3-tts:1.0.0 .
 # Rest of the steps identical to Linux host
 ```
 
-**Verify image in GCP Console:**
-- Navigate to: Artifact Registry → dockerimg → faster-qwen3-tts
-- Confirm version 1.0.0 is present
+**Verify image:**
+- Navigate to: https://github.com/orgs/QarlAI/packages
+- Confirm version 1.0.0 is present under `dockerimg/faster-qwen3-tts`
 
 ### Step 3: Package and Push Helm Chart
 
@@ -127,11 +126,10 @@ cd helm
 helm package .
 # This creates: faster-qwen3-tts-1.0.0.tgz
 
-# Authenticate Helm with GAR
-cat /path/to/service-account-key.json | \
-  helm registry login -u _json_key --password-stdin us-docker.pkg.dev
+# Authenticate Helm with GHCR
+echo "$GHCR_PAT" | helm registry login ghcr.io -u maviszeng-qarl --password-stdin
 
-# Push to GAR
+# Push to GHCR
 helm push faster-qwen3-tts-1.0.0.tgz oci://ghcr.io/qarlai/helm
 
 # Return to project root
@@ -463,16 +461,15 @@ docker tag faster-qwen3-tts:1.0.0 \
   ghcr.io/qarlai/dockerimg/faster-qwen3-tts:1.0.0
 
 # Authenticate
-cat $SERVICE_ACCOUNT_KEY | \
-  docker login -u _json_key --password-stdin https://us-docker.pkg.dev
+echo "$GHCR_PAT" | docker login ghcr.io -u maviszeng-qarl --password-stdin
 
 # Push
 docker push ghcr.io/qarlai/dockerimg/faster-qwen3-tts:1.0.0
 ```
 
 - [ ] Docker authentication successful
-- [ ] Image pushed to GAR
-- [ ] Verify in GCP Console: Artifact Registry → dockerimg → faster-qwen3-tts
+- [ ] Image pushed to GHCR
+- [ ] Verify at: https://github.com/orgs/QarlAI/packages
 
 #### 3. Package and Push Helm Chart
 
@@ -482,18 +479,17 @@ cd helm
 # Package the chart (creates faster-qwen3-tts-1.0.0.tgz)
 helm package .
 
-# Authenticate Helm with GAR
-cat $SERVICE_ACCOUNT_KEY | \
-  helm registry login -u _json_key --password-stdin us-docker.pkg.dev
+# Authenticate Helm with GHCR
+echo "$GHCR_PAT" | helm registry login ghcr.io -u maviszeng-qarl --password-stdin
 
-# Push to GAR
+# Push to GHCR
 helm push faster-qwen3-tts-1.0.0.tgz oci://ghcr.io/qarlai/helm
 
 cd ..
 ```
 
 - [ ] Helm chart packaged
-- [ ] Chart pushed to GAR
+- [ ] Chart pushed to GHCR
 - [ ] Verify in GCP Console: Artifact Registry → helm → faster-qwen3-tts
 
 ### ✓ Infrastructure Deployment

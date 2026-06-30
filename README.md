@@ -517,7 +517,7 @@ export SA_KEY="/path/to/service-account-key.json"
 export VERSION="1.0.0"
 
 # Authenticate
-cat $SA_KEY | docker login -u _json_key --password-stdin https://us-docker.pkg.dev
+echo "$GHCR_PAT" | docker login ghcr.io -u maviszeng-qarl --password-stdin
 
 # Tag and push the base image
 docker tag faster-qwen3-tts-base:latest \
