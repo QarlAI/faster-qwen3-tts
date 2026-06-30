@@ -39,7 +39,7 @@ variable "zone" {
 }
 
 variable "image_registry" {
-  description = "Docker image registry path (e.g. us-docker.pkg.dev/project/repo)"
+  description = "Docker image registry path (e.g. ghcr.io/qarlai/dockerimg)"
   type        = string
   default     = "ghcr.io/qarlai/dockerimg"
 }

@@ -25,9 +25,9 @@ Deploy Faster Qwen3 TTS model on GCP with real-time streaming audio using CUDA g
 ### Required
 1. GCP account with GPU quota in target region
 2. Service account with necessary permissions
-3. Google Artifact Registry (GAR) repositories:
-   - Docker images: `us-docker.pkg.dev/<project>/dockerimg`
-   - Helm charts: `us-docker.pkg.dev/<project>/helm`
+3. GHCR repositories:
+   - Docker images: `ghcr.io/qarlai/dockerimg`
+   - Helm charts: `ghcr.io/qarlai/helm`
 4. HuggingFace account (for model access)
 5. Terraform >= 1.0
 6. Docker (for building images)
@@ -96,14 +96,14 @@ docker build -t faster-qwen3-tts:1.0.0 .
 
 # Tag for GAR
 docker tag faster-qwen3-tts:1.0.0 \
-  us-docker.pkg.dev/<gcp_project>/dockerimg/faster-qwen3-tts:1.0.0
+  ghcr.io/qarlai/dockerimg/faster-qwen3-tts:1.0.0
 
 # Authenticate with GAR
 cat /path/to/service-account-key.json | \
   docker login -u _json_key --password-stdin https://us-docker.pkg.dev
 
 # Push to GAR
-docker push us-docker.pkg.dev/<gcp_project>/dockerimg/faster-qwen3-tts:1.0.0
+docker push ghcr.io/qarlai/dockerimg/faster-qwen3-tts:1.0.0
 ```
 
 **From Mac (Apple Silicon):**
@@ -132,7 +132,7 @@ cat /path/to/service-account-key.json | \
   helm registry login -u _json_key --password-stdin us-docker.pkg.dev
 
 # Push to GAR
-helm push faster-qwen3-tts-1.0.0.tgz oci://us-docker.pkg.dev/<gcp_project>/helm
+helm push faster-qwen3-tts-1.0.0.tgz oci://ghcr.io/qarlai/helm
 
 # Return to project root
 cd ..
@@ -165,8 +165,8 @@ service_account_email = "your-service-account@your-project.iam.gserviceaccount.c
 gar_service_account_key_path = "/path/to/gar-service-account-key.json"
 
 # Your GAR registries (full paths)
-gar_helm_registry = "oci://us-docker.pkg.dev/your-project/helm/faster-qwen3-tts"
-docker_registry   = "us-docker.pkg.dev/your-project/dockerimg/faster-qwen3-tts"
+gar_helm_registry = "oci://ghcr.io/qarlai/helm/faster-qwen3-tts"
+docker_registry   = "ghcr.io/qarlai/dockerimg/faster-qwen3-tts"
 
 # Your HuggingFace token
 huggingface_token = "hf_..."
@@ -457,14 +457,14 @@ export SERVICE_ACCOUNT_KEY="/path/to/service-account-key.json"
 
 # Tag for GAR
 docker tag faster-qwen3-tts:1.0.0 \
-  us-docker.pkg.dev/$GCP_PROJECT/dockerimg/faster-qwen3-tts:1.0.0
+  ghcr.io/qarlai/dockerimg/faster-qwen3-tts:1.0.0
 
 # Authenticate
 cat $SERVICE_ACCOUNT_KEY | \
   docker login -u _json_key --password-stdin https://us-docker.pkg.dev
 
 # Push
-docker push us-docker.pkg.dev/$GCP_PROJECT/dockerimg/faster-qwen3-tts:1.0.0
+docker push ghcr.io/qarlai/dockerimg/faster-qwen3-tts:1.0.0
 ```
 
 - [ ] Docker authentication successful
@@ -484,7 +484,7 @@ cat $SERVICE_ACCOUNT_KEY | \
   helm registry login -u _json_key --password-stdin us-docker.pkg.dev
 
 # Push to GAR
-helm push faster-qwen3-tts-1.0.0.tgz oci://us-docker.pkg.dev/$GCP_PROJECT/helm
+helm push faster-qwen3-tts-1.0.0.tgz oci://ghcr.io/qarlai/helm
 
 cd ..
 ```
@@ -516,8 +516,8 @@ service_account_email = "your-sa@your-project.iam.gserviceaccount.com"
 gar_service_account_key_path = "/path/to/gar-key.json"
 
 # Full paths to your GAR resources
-gar_helm_registry = "oci://us-docker.pkg.dev/your-project/helm/faster-qwen3-tts"
-docker_registry   = "us-docker.pkg.dev/your-project/dockerimg/faster-qwen3-tts"
+gar_helm_registry = "oci://ghcr.io/qarlai/helm/faster-qwen3-tts"
+docker_registry   = "ghcr.io/qarlai/dockerimg/faster-qwen3-tts"
 
 huggingface_token = "hf_..."
 ```
@@ -730,13 +730,13 @@ CUDA graphs capture automatically on first generation. If you see warnings:
 # Build new version
 docker build -t faster-qwen3-tts:1.0.1 .
 docker tag faster-qwen3-tts:1.0.1 \
-  us-docker.pkg.dev/$GCP_PROJECT/dockerimg/faster-qwen3-tts:1.0.1
-docker push us-docker.pkg.dev/$GCP_PROJECT/dockerimg/faster-qwen3-tts:1.0.1
+  ghcr.io/qarlai/dockerimg/faster-qwen3-tts:1.0.1
+docker push ghcr.io/qarlai/dockerimg/faster-qwen3-tts:1.0.1
 
 # Update deployment on instance
 ssh ubuntu@<PUBLIC_IP>
 kubectl set image deployment/faster-qwen3-tts \
-  faster-qwen3-tts=us-docker.pkg.dev/$GCP_PROJECT/dockerimg/faster-qwen3-tts:1.0.1 \
+  faster-qwen3-tts=ghcr.io/qarlai/dockerimg/faster-qwen3-tts:1.0.1 \
   -n faster-qwen3-tts
 ```
 
@@ -749,12 +749,12 @@ cd helm
 
 # Package and push
 helm package .
-helm push faster-qwen3-tts-1.0.1.tgz oci://us-docker.pkg.dev/$GCP_PROJECT/helm
+helm push faster-qwen3-tts-1.0.1.tgz oci://ghcr.io/qarlai/helm
 
 # Upgrade on instance
 ssh ubuntu@<PUBLIC_IP>
 helm upgrade faster-qwen3-tts \
-  oci://us-docker.pkg.dev/$GCP_PROJECT/helm/faster-qwen3-tts \
+  oci://ghcr.io/qarlai/helm/faster-qwen3-tts \
   --version 1.0.1 \
   --namespace faster-qwen3-tts
 ```

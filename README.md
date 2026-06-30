@@ -509,7 +509,7 @@ On Mac (Apple Silicon), add `--platform linux/amd64`.
 docker build -t faster-qwen3-tts:<VERSION> .
 ```
 
-### 3. Push both images to Google Artifact Registry
+### 3. Push both images to GHCR
 
 ```bash
 export GCP_PROJECT="your-gcp-project-id"
@@ -521,16 +521,16 @@ cat $SA_KEY | docker login -u _json_key --password-stdin https://us-docker.pkg.d
 
 # Tag and push the base image
 docker tag faster-qwen3-tts-base:latest \
-  us-docker.pkg.dev/$GCP_PROJECT/dockerimg/faster-qwen3-tts-base:latest
-docker push us-docker.pkg.dev/$GCP_PROJECT/dockerimg/faster-qwen3-tts-base:latest
+  ghcr.io/qarlai/dockerimg/faster-qwen3-tts-base:latest
+docker push ghcr.io/qarlai/dockerimg/faster-qwen3-tts-base:latest
 
 # Tag and push the API image
 docker tag faster-qwen3-tts:$VERSION \
-  us-docker.pkg.dev/$GCP_PROJECT/dockerimg/faster-qwen3-tts:$VERSION
-docker push us-docker.pkg.dev/$GCP_PROJECT/dockerimg/faster-qwen3-tts:$VERSION
+  ghcr.io/qarlai/dockerimg/faster-qwen3-tts:$VERSION
+docker push ghcr.io/qarlai/dockerimg/faster-qwen3-tts:$VERSION
 ```
 
-Verify in the GCP Console: **Artifact Registry → dockerimg** — both `faster-qwen3-tts-base` and `faster-qwen3-tts` should be listed.
+Verify at https://github.com/orgs/QarlAI/packages — both `faster-qwen3-tts-base` and `faster-qwen3-tts` should be listed under `dockerimg/`.
 
 ### When to rebuild
 
