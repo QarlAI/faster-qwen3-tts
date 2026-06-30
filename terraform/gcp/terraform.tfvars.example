@@ -31,12 +31,12 @@ service_account_email = "your-service-account@your-project.iam.gserviceaccount.c
 gar_service_account_key_path = "/path/to/gar-service-account-key.json"
 
 # Google Artifact Registry - Helm Chart Repository (optional - leave empty to use values.yaml default)
-# Default: oci://us-docker.pkg.dev/qarlproductionregistries/helm/faster-qwen3-tts
+# Default: oci://ghcr.io/qarlai/helm/faster-qwen3-tts
 # Format: Full OCI path including chart name
 gar_helm_registry = ""  # e.g., "oci://us-docker.pkg.dev/your-project/helm/faster-qwen3-tts"
 
 # Google Artifact Registry - Docker Image Repository (optional - leave empty to use values.yaml default)
-# Default: us-docker.pkg.dev/qarlproductionregistries/dockerimg/faster-qwen3-tts
+# Default: ghcr.io/qarlai/dockerimg/faster-qwen3-tts
 # Format: Full path including image name (no oci:// prefix)
 docker_registry = ""  # e.g., "us-docker.pkg.dev/your-project/dockerimg/faster-qwen3-tts"
 
