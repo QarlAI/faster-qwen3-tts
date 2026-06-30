@@ -27,8 +27,9 @@ private_key_path = "~/.ssh/id_rsa"
 # Service Account Configuration
 service_account_email = "your-service-account@your-project.iam.gserviceaccount.com"
 
-# Google Artifact Registry Configuration
-gar_service_account_key_path = "/path/to/gar-service-account-key.json"
+# GHCR registry credentials (classic PAT with read:packages on ghcr.io/qarlai)
+ghcr_pat  = ""              # required — get from team password manager
+ghcr_user = "maviszeng-qarl"  # GitHub handle that owns the PAT
 
 # Google Artifact Registry - Helm Chart Repository (optional - leave empty to use values.yaml default)
 # Default: oci://ghcr.io/qarlai/helm/faster-qwen3-tts

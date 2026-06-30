@@ -162,9 +162,12 @@ gcp_credentials_file = "/path/to/your-gcp-credentials.json"
 
 # Your service account
 service_account_email = "your-service-account@your-project.iam.gserviceaccount.com"
-gar_service_account_key_path = "/path/to/gar-service-account-key.json"
 
-# Your GAR registries (full paths)
+# GHCR registry credentials
+ghcr_pat  = ""              # classic PAT with read:packages on ghcr.io/qarlai
+ghcr_user = "maviszeng-qarl"
+
+# Your GHCR registries (full paths)
 gar_helm_registry = "oci://ghcr.io/qarlai/helm/faster-qwen3-tts"
 docker_registry   = "ghcr.io/qarlai/dockerimg/faster-qwen3-tts"
 
@@ -513,9 +516,12 @@ gcp_project_id       = "your-gcp-project-id"
 gcp_credentials_file = "/path/to/gcp-credentials.json"
 
 service_account_email = "your-sa@your-project.iam.gserviceaccount.com"
-gar_service_account_key_path = "/path/to/gar-key.json"
 
-# Full paths to your GAR resources
+# GHCR registry credentials
+ghcr_pat  = ""
+ghcr_user = "maviszeng-qarl"
+
+# Full paths to your GHCR resources
 gar_helm_registry = "oci://ghcr.io/qarlai/helm/faster-qwen3-tts"
 docker_registry   = "ghcr.io/qarlai/dockerimg/faster-qwen3-tts"
 
