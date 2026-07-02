@@ -6,7 +6,7 @@ on:
     types: [ opened, synchronize, reopened, closed ]
     paths-ignore:
       - 'helm/**'
-      # - '.github/workflows/**'  # Restore before merge
+      - '.github/workflows/**'
       - 'taskfile.yaml'
 
 jobs:
@@ -57,7 +57,7 @@ jobs:
 
   call-sync-library:
     needs: build-image
-    uses: QarlAI/.github/.github/workflows/build-push-sync.yaml@mavis/GAR-to-GHCR
+    uses: QarlAI/.github/.github/workflows/build-push-sync.yaml@main
     permissions:
       contents: read
       packages: write
