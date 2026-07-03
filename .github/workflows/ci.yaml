@@ -60,6 +60,7 @@ jobs:
     uses: QarlAI/.github/.github/workflows/build-push-sync.yaml@main
     permissions:
       contents: read
+      id-token: write
       packages: write
       pull-requests: write
     with:
