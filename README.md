@@ -509,7 +509,7 @@ On Mac (Apple Silicon), add `--platform linux/amd64`.
 docker build -t faster-qwen3-tts:<VERSION> .
 ```
 
-### 3. Push both images to GHCR
+### 3. Push both images to Google Artifact Registry
 
 ```bash
 export GCP_PROJECT="your-gcp-project-id"
@@ -517,20 +517,20 @@ export SA_KEY="/path/to/service-account-key.json"
 export VERSION="1.0.0"
 
 # Authenticate
-echo "$GHCR_PAT" | docker login ghcr.io -u maviszeng-qarl --password-stdin
+cat $SA_KEY | docker login -u _json_key --password-stdin https://us-docker.pkg.dev
 
 # Tag and push the base image
 docker tag faster-qwen3-tts-base:latest \
-  ghcr.io/qarlai/dockerimg/faster-qwen3-tts-base:latest
-docker push ghcr.io/qarlai/dockerimg/faster-qwen3-tts-base:latest
+  us-docker.pkg.dev/$GCP_PROJECT/dockerimg/faster-qwen3-tts-base:latest
+docker push us-docker.pkg.dev/$GCP_PROJECT/dockerimg/faster-qwen3-tts-base:latest
 
 # Tag and push the API image
 docker tag faster-qwen3-tts:$VERSION \
-  ghcr.io/qarlai/dockerimg/faster-qwen3-tts:$VERSION
-docker push ghcr.io/qarlai/dockerimg/faster-qwen3-tts:$VERSION
+  us-docker.pkg.dev/$GCP_PROJECT/dockerimg/faster-qwen3-tts:$VERSION
+docker push us-docker.pkg.dev/$GCP_PROJECT/dockerimg/faster-qwen3-tts:$VERSION
 ```
 
-Verify at https://github.com/orgs/QarlAI/packages — both `faster-qwen3-tts-base` and `faster-qwen3-tts` should be listed under `dockerimg/`.
+Verify in the GCP Console: **Artifact Registry → dockerimg** — both `faster-qwen3-tts-base` and `faster-qwen3-tts` should be listed.
 
 ### When to rebuild
 

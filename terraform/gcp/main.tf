@@ -131,9 +131,20 @@ resource "google_compute_instance" "tts" {
     tts_model              = var.tts_model
     chunk_size             = var.chunk_size
     huggingface_token      = var.huggingface_token
-    ghcr_pat               = var.ghcr_pat
-    ghcr_user              = var.ghcr_user
   })
+
+  # Copy the GAR service account key file to the instance
+  provisioner "file" {
+    source      = var.gar_service_account_key_path
+    destination = "/home/ubuntu/key.json"
+
+    connection {
+      type        = "ssh"
+      user        = var.ssh_username
+      private_key = file(var.private_key_path)
+      host        = self.network_interface[0].access_config[0].nat_ip
+    }
+  }
 
   service_account {
     email  = var.service_account_email
