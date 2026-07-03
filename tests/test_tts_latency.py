@@ -124,8 +124,7 @@ TEXTS = [
         "Artificial intelligence is rapidly transforming the way we live and work, reshaping "
         "industries from healthcare to transportation. As these systems become more capable, "
         "it is increasingly important to deploy them responsibly, with careful attention to "
-        "performance, cost, and reliability. Choosing the right hardware for inference is a "
-        "critical part of delivering a smooth, real-time experience to every user.",
+        "performance, cost, and reliability.",
     ),
 ]
 
