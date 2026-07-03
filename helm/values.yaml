@@ -1,12 +1,12 @@
 # values.yaml - Faster Qwen3 TTS Configuration
 
 image:
-  repository: ghcr.io/qarlai/dockerimg/faster-qwen3-tts
+  repository: us-docker.pkg.dev/qarlproductionregistries/dockerimg/faster-qwen3-tts
   tag: "1.0.9"
   pullPolicy: IfNotPresent
 
 imagePullSecrets:
-  - name: ghcr-pull-secret
+  - name: gar-docker-reg-secret
 
 # Number of TTS pods. Each pod requests one GPU, so the node-group=tts node(s)
 # must collectively expose at least this many `nvidia.com/gpu` resources.

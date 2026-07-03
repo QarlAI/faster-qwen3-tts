@@ -27,19 +27,18 @@ private_key_path = "~/.ssh/id_rsa"
 # Service Account Configuration
 service_account_email = "your-service-account@your-project.iam.gserviceaccount.com"
 
-# GHCR registry credentials (classic PAT with read:packages on ghcr.io/qarlai)
-ghcr_pat  = ""              # required — get from team password manager
-ghcr_user = "maviszeng-qarl"  # GitHub handle that owns the PAT
+# Google Artifact Registry Configuration
+gar_service_account_key_path = "/path/to/gar-service-account-key.json"
 
 # Google Artifact Registry - Helm Chart Repository (optional - leave empty to use values.yaml default)
-# Default: oci://ghcr.io/qarlai/helm/faster-qwen3-tts
+# Default: oci://us-docker.pkg.dev/qarlproductionregistries/helm/faster-qwen3-tts
 # Format: Full OCI path including chart name
-gar_helm_registry = ""  # e.g., "oci://ghcr.io/qarlai/helm/faster-qwen3-tts"
+gar_helm_registry = ""  # e.g., "oci://us-docker.pkg.dev/your-project/helm/faster-qwen3-tts"
 
 # Google Artifact Registry - Docker Image Repository (optional - leave empty to use values.yaml default)
-# Default: ghcr.io/qarlai/dockerimg/faster-qwen3-tts
+# Default: us-docker.pkg.dev/qarlproductionregistries/dockerimg/faster-qwen3-tts
 # Format: Full path including image name (no oci:// prefix)
-docker_registry = ""  # e.g., "ghcr.io/qarlai/dockerimg/faster-qwen3-tts"
+docker_registry = ""  # e.g., "us-docker.pkg.dev/your-project/dockerimg/faster-qwen3-tts"
 
 # Docker Image Tag (optional - leave empty to use values.yaml default)
 docker_image_tag = "1.0.1"  # e.g., "1.0.1"

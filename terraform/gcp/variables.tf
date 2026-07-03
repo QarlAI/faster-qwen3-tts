@@ -83,26 +83,19 @@ variable "service_account_email" {
   type        = string
 }
 
-variable "ghcr_pat" {
-  description = "Classic PAT with read:packages on ghcr.io/qarlai (used for docker/helm login)"
+variable "gar_service_account_key_path" {
+  description = "Path to Google Artifact Registry service account key JSON file"
   type        = string
-  sensitive   = true
-}
-
-variable "ghcr_user" {
-  description = "GitHub handle that owns the PAT"
-  type        = string
-  default     = "maviszeng-qarl"
 }
 
 variable "gar_helm_registry" {
-  description = "Full OCI path to Helm chart (e.g., oci://ghcr.io/qarlai/helm/faster-qwen3-tts). Leave empty to use default from values.yaml"
+  description = "Full OCI path to Helm chart (e.g., oci://us-docker.pkg.dev/project/helm/faster-qwen3-tts). Leave empty to use default from values.yaml"
   type        = string
   default     = ""
 }
 
 variable "docker_registry" {
-  description = "Full path to Docker image (e.g., ghcr.io/qarlai/dockerimg/faster-qwen3-tts). Leave empty to use default from values.yaml"
+  description = "Full path to Docker image (e.g., us-docker.pkg.dev/project/dockerimg/faster-qwen3-tts). Leave empty to use default from values.yaml"
   type        = string
   default     = ""
 }

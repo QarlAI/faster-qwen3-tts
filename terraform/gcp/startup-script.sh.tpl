@@ -235,38 +235,59 @@ helm install local-path-provisioner containeroo/local-path-provisioner \
   --wait --timeout=5m || true
 
 # ============================================================
-# Authenticate with GHCR
+# Authenticate with Google Artifact Registry
 # ============================================================
-echo "Authenticating Docker with GHCR..."
-echo "${ghcr_pat}" | docker login ghcr.io -u "${ghcr_user}" --password-stdin
+echo "Authenticating with Google Artifact Registry..."
+
+# The key.json file is copied by Terraform to /home/ubuntu/key.json
+KEY_FILE="/home/ubuntu/key.json"
+
+# Wait for key file to be present (Terraform file provisioner may take a moment)
+for i in {1..30}; do
+  if [ -f "$KEY_FILE" ]; then
+    echo "Service account key file found"
+    break
+  fi
+  if [ $i -eq 30 ]; then
+    echo "ERROR: Service account key file not found after 2.5 minutes"
+    exit 1
+  fi
+  echo "Waiting for service account key file... (attempt $i/30)"
+  sleep 5
+done
+
+# Authenticate Docker with Google Artifact Registry
+echo "Authenticating Docker with GAR..."
+cat "$KEY_FILE" | docker login -u _json_key --password-stdin https://us-docker.pkg.dev
 if [ $? -ne 0 ]; then
-  echo "ERROR: Docker authentication with GHCR failed"
+  echo "ERROR: Docker authentication with GAR failed"
   exit 1
 fi
 
-echo "Authenticating Helm with GHCR..."
-echo "${ghcr_pat}" | helm registry login ghcr.io -u "${ghcr_user}" --password-stdin
+# Authenticate Helm with Google Artifact Registry
+echo "Authenticating Helm with GAR..."
+cat "$KEY_FILE" | helm registry login -u _json_key --password-stdin https://us-docker.pkg.dev
 if [ $? -ne 0 ]; then
-  echo "ERROR: Helm authentication with GHCR failed"
+  echo "ERROR: Helm authentication with GAR failed"
   exit 1
 fi
 
-echo "Successfully authenticated with GHCR"
+echo "Successfully authenticated with Google Artifact Registry"
 
 # ============================================================
-# Install the Faster Qwen3 TTS Helm chart from GHCR
+# Install the Faster Qwen3 TTS Helm chart from GAR
 # ============================================================
-echo "Installing Faster Qwen3 TTS Helm chart from GHCR..."
+echo "Installing Faster Qwen3 TTS Helm chart from Google Artifact Registry..."
 
 # Create namespace
 kubectl create namespace faster-qwen3-tts --dry-run=client -o yaml | kubectl apply -f -
 
-# Create image pull secret for GHCR
-echo "Creating image pull secret for GHCR..."
-kubectl create secret docker-registry ghcr-pull-secret \
-  --docker-server=ghcr.io \
-  --docker-username="${ghcr_user}" \
-  --docker-password="${ghcr_pat}" \
+# Create image pull secret for GAR
+echo "Creating image pull secret for Google Artifact Registry..."
+kubectl create secret docker-registry gar-docker-reg-secret \
+  --docker-server=us-docker.pkg.dev \
+  --docker-username=_json_key \
+  --docker-password="$(cat $KEY_FILE)" \
   --namespace faster-qwen3-tts \
   --dry-run=client -o yaml | kubectl apply -f -
 
@@ -284,7 +305,7 @@ fi
 
 # Install the Helm chart from OCI registry with custom values
 HELM_ARGS="--namespace faster-qwen3-tts"
-HELM_ARGS="$HELM_ARGS --set imagePullSecrets[0].name=ghcr-pull-secret"
+HELM_ARGS="$HELM_ARGS --set imagePullSecrets[0].name=gar-docker-reg-secret"
 HELM_ARGS="$HELM_ARGS --set model.name=${tts_model}"
 HELM_ARGS="$HELM_ARGS --set model.chunkSize=${chunk_size}"
 
