@@ -490,6 +490,39 @@ async def health():
     }
 
 
+@app.post("/voices/refresh")
+async def refresh_voices():
+    """Re-download voices from git/GCS and reload the registry (no restart needed)."""
+    global voices
+    from init_voices import init_voices
+    # Wipe stale .pt embeddings so they get re-extracted from the fresh wavs.
+    import glob
+    for pt in glob.glob(os.path.join(VOICES_DIR, "*.pt")):
+        os.remove(pt)
+    init_voices()
+    voices = discover_voices(VOICES_DIR)
+    gcs_bucket = get_gcs_bucket()
+    for voice_name, (wav_path, ref_text, vcp) in list(voices.items()):
+        if vcp is None and wav_path and os.path.exists(wav_path):
+            pt_out = os.path.join(os.path.dirname(wav_path), f"{voice_name}.pt")
+            if extract_speaker_embedding(wav_path, ref_text, pt_out):
+                voices[voice_name] = (wav_path, ref_text, load_voice_clone_prompt(pt_out, ref_text))
+        if gcs_bucket and "/" not in voice_name:
+            pfx = f"{VOICE_CACHE_PREFIX}/{voice_name}"
+            try:
+                if wav_path and os.path.exists(wav_path):
+                    gcs_bucket.blob(f"{pfx}.wav").upload_from_filename(wav_path)
+                txt_path = os.path.splitext(wav_path)[0] + ".txt"
+                if os.path.exists(txt_path):
+                    gcs_bucket.blob(f"{pfx}.txt").upload_from_filename(txt_path)
+                pt_path = os.path.splitext(wav_path)[0] + ".pt"
+                if os.path.exists(pt_path):
+                    gcs_bucket.blob(f"{pfx}.pt").upload_from_filename(pt_path)
+            except Exception as e:
+                logging.warning(f"GCS upload failed for '{voice_name}': {e}")
+    return {"status": "ok", "voices": list(voices.keys())}
+
+
 @app.get("/voices")
 async def list_voices(uid: Optional[str] = None):
     """List available voices. Checks GCS for user voices if configured."""
